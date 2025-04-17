@@ -16,8 +16,8 @@ gem "bootsnap", require: false
 
 # Redis for caching (needed for analytics)
 gem 'redis'
+gem 'redis-client'
 gem 'connection_pool'
-gem "solid_queue"
 
 group :development, :test do
   gem "debug", platforms: %i[ mri mswin mswin64 mingw x64_mingw ]

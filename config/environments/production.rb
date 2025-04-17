@@ -46,12 +46,19 @@ Rails.application.configure do
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
 
-  # Replace the default in-process memory cache store with a durable alternative.
-  config.cache_store = :solid_cache_store
+  # Configure cache store for production
+  if ENV["REDIS_URL"].present?
+    config.cache_store = :redis_cache_store, { 
+      url: ENV["REDIS_URL"],
+      namespace: "searchbox:cache",
+      expires_in: 1.day
+    }
+  else
+    config.cache_store = :memory_store, { size: 64.megabytes }
+  end
 
-  # Replace the default in-process and non-durable queuing backend for Active Job.
-  config.active_job.queue_adapter = :solid_queue
-  config.solid_queue.connects_to = { database: { writing: :queue } }
+  # Use a simple in-memory queue adapter for Active Job
+  config.active_job.queue_adapter = :async
 
   # Ignore bad email addresses and do not raise email delivery errors.
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
