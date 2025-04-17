@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: searchbox-backend
+    env: ruby
+    buildCommand: bundle install && bundle exec rake assets:precompile && bundle exec rake assets:clean && bundle exec rake render:setup_db
+    startCommand: bundle exec rails server -p $PORT -e production
+    healthCheckPath: /up
+    envVars:
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: searchbox-redis
+          property: connectionString
+
+  - type: redis
+    name: searchbox-redis
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+    plan: free 
