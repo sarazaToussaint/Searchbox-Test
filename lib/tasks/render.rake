@@ -16,15 +16,20 @@ namespace :render do
           if Article.count == 0
             puts "Database is empty, seeding with initial data..."
             Rake::Task["db:seed"].invoke
+            puts "Seeded database with #{Article.count} articles"
           else
-            puts "Database already contains data, skipping seed."
+            puts "Database already contains #{Article.count} articles, skipping seed."
           end
         else
           puts "Not using PostgreSQL, running standard setup..."
           Rake::Task["db:migrate"].invoke
           
           if Article.count == 0
+            puts "Database is empty, seeding with initial data..."
             Rake::Task["db:seed"].invoke
+            puts "Seeded database with #{Article.count} articles"
+          else
+            puts "Database already contains #{Article.count} articles, skipping seed."
           end
         end
         
@@ -36,6 +41,7 @@ namespace :render do
       end
     else
       puts "This task is intended for production environment only."
+      puts "For development, use db:setup or db:seed directly."
     end
   end
 end 
