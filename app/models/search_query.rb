@@ -72,29 +72,35 @@ class SearchQuery < ApplicationRecord
   # Get top searches globally
   def self.top_searches(limit = 5)
     select('term, SUM(search_count) as total_searches')
-      .group(:term)
+      .group('term')
       .order('total_searches DESC')
       .limit(limit)
+  rescue => e
+    Rails.logger.error("Error in top_searches: #{e.message}")
+    []
   end
   
   # Get top searches for a specific user
   def self.top_searches_for_user(user_identifier, limit = 5)
-    puts "Finding top searches for user: #{user_identifier}"
+    Rails.logger.info "Finding top searches for user: #{user_identifier}"
     
     # Get all searches for this user
     searches = where(user_identifier: user_identifier).order(search_count: :desc).limit(limit)
     
     # Debug output
     if searches.empty?
-      puts "No searches found for user #{user_identifier}"
+      Rails.logger.info "No searches found for user #{user_identifier}"
     else
-      puts "Found #{searches.count} searches for user #{user_identifier}"
+      Rails.logger.info "Found #{searches.count} searches for user #{user_identifier}"
       searches.each do |search|
-        puts "  - #{search.term} (#{search.search_count} times, #{search.results_count} results)"
+        Rails.logger.info "  - #{search.term} (#{search.search_count} times, #{search.results_count} results)"
       end
     end
     
     return searches
+  rescue => e
+    Rails.logger.error("Error in top_searches_for_user: #{e.message}")
+    []
   end
   
   # Get top search terms (just the strings) for a specific user
@@ -103,21 +109,38 @@ class SearchQuery < ApplicationRecord
       .order(search_count: :desc)
       .limit(limit)
       .pluck(:term)
+  rescue => e
+    Rails.logger.error("Error in top_search_terms_for_user: #{e.message}")
+    []
   end
   
-  # Delete similar searches to keep analytics clean
+  # Delete similar searches to keep analytics clean - PostgreSQL safe version
   def delete_similar_searches
     # Delete searches that might be typing intermediates
     # For example, if "ruby programming" exists, 
     # delete "rub", "ruby", "ruby p", etc. to keep analytics clean
     return if term.blank?
     
-    SearchQuery.where(user_identifier: user_identifier)
-              .where("term LIKE ? AND term != ? AND id != ?", 
-                     "#{term.first(term.length/2)}%", 
-                     term, 
-                     id)
-              .destroy_all
+    begin
+      # Use LIKE for SQLite and ILIKE for PostgreSQL (case-insensitive)
+      if self.class.connection.adapter_name.downcase.include?('postgresql')
+        SearchQuery.where(user_identifier: user_identifier)
+                  .where("term ILIKE ? AND term != ? AND id != ?", 
+                         "#{term.first(term.length/2)}%", 
+                         term, 
+                         id)
+                  .destroy_all
+      else
+        SearchQuery.where(user_identifier: user_identifier)
+                  .where("term LIKE ? AND term != ? AND id != ?", 
+                         "#{term.first(term.length/2)}%", 
+                         term, 
+                         id)
+                  .destroy_all
+      end
+    rescue => e
+      Rails.logger.error("Error in delete_similar_searches: #{e.message}")
+    end
   end
   
   private

@@ -32,6 +32,9 @@ class Article < ApplicationRecord
       .group('articles.id')
       .order('total_appearances DESC')
       .limit(limit)
+  rescue => e
+    Rails.logger.error("Error in top_appearing: #{e.message}")
+    none
   end
   
   # Get top appearing articles for a specific user with accurate per-user count
@@ -43,6 +46,9 @@ class Article < ApplicationRecord
       .group('articles.id')
       .order('total_appearances DESC')
       .limit(limit)
+  rescue => e
+    Rails.logger.error("Error in top_appearing_for_user: #{e.message}")
+    none
   end
   
   # Get appearance count for a specific user
@@ -63,11 +69,11 @@ class Article < ApplicationRecord
     last_query = query_scope.first
     
     if last_query.nil?
-      puts "No search queries found in the database#{user_identifier ? ' for user ' + user_identifier : ''}"
+      Rails.logger.info("No search queries found in the database#{user_identifier ? ' for user ' + user_identifier : ''}")
       return
     end
     
-    puts "Recording appearance for article #{id} (#{title}) with search query #{last_query.id} (#{last_query.term})"
+    Rails.logger.info("Recording appearance for article #{id} (#{title}) with search query #{last_query.id} (#{last_query.term})")
     
     # Create or find the article view record
     begin
@@ -81,14 +87,14 @@ class Article < ApplicationRecord
       if article_view.new_record?
         article_view.view_count = 1
         saved = article_view.save
-        puts "Created new article appearance: #{saved ? 'success' : 'failed'}"
-        puts "Errors: #{article_view.errors.full_messages}" unless saved
+        Rails.logger.info("Created new article appearance: #{saved ? 'success' : 'failed'}")
+        Rails.logger.info("Errors: #{article_view.errors.full_messages}") unless saved
       else
-        puts "Article appearance already exists, not creating duplicate"
+        Rails.logger.info("Article appearance already exists, not creating duplicate")
       end
     rescue => e
-      puts "Error creating article appearance: #{e.class} - #{e.message}"
-      puts e.backtrace.join("\n")
+      Rails.logger.error("Error creating article appearance: #{e.class} - #{e.message}")
+      Rails.logger.error(e.backtrace.join("\n"))
     end
   end
 end
