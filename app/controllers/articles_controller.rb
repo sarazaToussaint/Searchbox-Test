@@ -11,25 +11,7 @@ class ArticlesController < ApplicationController
         format.json { render json: @articles }
       end
     rescue => e
-      # Log the error
-      Rails.logger.error("Error in articles#index: #{e.message}")
-      Rails.logger.error(e.backtrace.join("\n"))
-      
-      # Return a friendly error response
-      respond_to do |format|
-        format.html { 
-          @articles = []
-          flash[:error] = "An error occurred while loading articles. Please try again later."
-          render :index
-        }
-        format.json { 
-          render json: { 
-            error: "An error occurred while loading articles",
-            status: 500,
-            message: "Please try the debug_info endpoint for more details"
-          }, status: :internal_server_error 
-        }
-      end
+      handle_generic_error(e, "Error loading articles")
     end
   end
   
@@ -45,18 +27,7 @@ class ArticlesController < ApplicationController
       
       # Process analytics for final searches
       if is_final && !query.blank?
-        begin
-          user_identifier = ensure_user_identifier
-          ip_address = request.remote_ip
-          
-          # Save search analytics
-          process_search_analytics(query, user_identifier, ip_address, @articles.count)
-          
-          # Track article appearances
-          track_article_appearances(@articles, user_identifier) if @articles.any?
-        rescue => e
-          Rails.logger.error("Search analytics error: #{e.message}")
-        end
+        process_final_search(query, @articles)
       end
       
       # Prepare analytics data for response
@@ -85,19 +56,8 @@ class ArticlesController < ApplicationController
       load_analytics_from_cache(cached_analytics)
     else
       load_analytics_from_database(user_id)
-      
-      # Cache the analytics data
-      cache_analytics_data(user_id, {
-        top_searches: @top_searches,
-        top_articles: @top_articles,
-        total_unique_searches: @total_unique_searches,
-        total_articles_found: @total_articles_found,
-        total_appearances: @total_appearances
-      })
+      cache_analytics_data(user_id)
     end
-    
-    # Handle different data scope based on params
-    apply_analytics_scope(params, user_id)
     
     respond_to do |format|
       format.json { render json: format_analytics_response(user_id) }
@@ -108,7 +68,7 @@ class ArticlesController < ApplicationController
   # GET /articles/my_searches
   # Returns current user's search history
   def my_searches
-    user_id = params[:user_id] || ensure_user_identifier
+    user_id = ensure_user_identifier
     @searches = SearchQuery.top_searches_for_user(user_id, 20)
     
     respond_to do |format|
@@ -137,7 +97,7 @@ class ArticlesController < ApplicationController
   # GET /articles/my_top_articles
   # Returns most viewed articles for the current user
   def my_top_articles
-    user_id = params[:user_id] || ensure_user_identifier
+    user_id = ensure_user_identifier
     @articles = Article.top_appearing_for_user(user_id, 20)
     
     respond_to do |format|
@@ -176,25 +136,10 @@ class ArticlesController < ApplicationController
   def process_pending_searches
     user_id = ensure_user_identifier
     ip_address = request.remote_ip
-    
-    # Get pending searches from params
     pending_searches = params[:pending_searches]
     
     if pending_searches.present? && pending_searches.is_a?(Array)
-      processed = 0
-      
-      # Process each pending search
-      pending_searches.each do |search_data|
-        search_term = search_data[:query].to_s.strip
-        next if search_term.blank?
-        
-        # Get results count for this search
-        results_count = Article.search_by_title_and_content(search_term).count
-        
-        # Process search analytics
-        process_search_analytics(search_term, user_id, ip_address, results_count)
-        processed += 1
-      end
+      processed = process_batch_searches(pending_searches, user_id, ip_address)
       
       respond_to do |format|
         format.json { render json: { success: true, processed: processed } }
@@ -206,61 +151,71 @@ class ArticlesController < ApplicationController
     end
   end
   
-  # Add the debug endpoint right after the index action
+  # GET /articles/debug_info
+  # Debug endpoint for troubleshooting
   def debug_info
     begin
-      result = {
-        environment: Rails.env,
-        database_config: ActiveRecord::Base.connection_db_config.configuration_hash.except(:password),
-        database_tables: ActiveRecord::Base.connection.tables,
+      info = {
+        rails_env: Rails.env,
+        database_adapter: ActiveRecord::Base.connection.adapter_name,
+        database_version: ActiveRecord::Base.connection.select_value('SELECT version()'),
+        ruby_version: RUBY_VERSION,
+        rails_version: Rails::VERSION::STRING,
+        timestamp: Time.current.to_s,
+        user_identifier: ensure_user_identifier,
+        ip_address: request.remote_ip,
         article_count: Article.count,
         search_query_count: SearchQuery.count,
-        article_view_count: ArticleView.count,
-        rails_version: Rails.version,
-        ruby_version: RUBY_VERSION,
-        cookie_consent: cookies[:user_identifier].present?,
-        session_active: session[:user_identifier].present?,
-        ip_address: request.remote_ip
+        article_view_count: ArticleView.count
       }
       
-      # Try to get articles
-      begin
-        articles = Article.limit(2).to_a
-        result[:sample_article] = articles.first.attributes if articles.any?
-      rescue => e
-        result[:articles_error] = e.message
-        result[:articles_backtrace] = e.backtrace.first(5)
+      respond_to do |format|
+        format.json { render json: info }
+        format.html { render plain: info.map { |k, v| "#{k}: #{v}" }.join("\n") }
       end
-      
-      # Check search queries
-      begin
-        if SearchQuery.any?
-          result[:sample_query] = SearchQuery.first.attributes
-        end
-      rescue => e
-        result[:queries_error] = e.message
-      end
-      
-      # Check Redis
-      begin
-        redis_ping = REDIS_POOL.with { |redis| redis.ping }
-        result[:redis_ping] = redis_ping
-      rescue => e
-        result[:redis_error] = e.message
-      end
-      
-      render json: result
     rescue => e
-      render json: {
-        error: e.message,
-        backtrace: e.backtrace.first(10)
-      }
+      handle_generic_error(e, "Error fetching debug info")
     end
   end
   
   private
   
-  # Process search analytics directly
+  # Process a final search term
+  def process_final_search(query, articles)
+    begin
+      user_identifier = ensure_user_identifier
+      ip_address = request.remote_ip
+      
+      # Save search analytics
+      process_search_analytics(query, user_identifier, ip_address, articles.count)
+      
+      # Track article appearances
+      track_article_appearances(articles, user_identifier) if articles.any?
+    rescue => e
+      Rails.logger.error("Search analytics error: #{e.message}")
+    end
+  end
+  
+  # Process a batch of searches
+  def process_batch_searches(searches, user_id, ip_address)
+    processed = 0
+    
+    searches.each do |search_data|
+      search_term = search_data[:query].to_s.strip
+      next if search_term.blank?
+      
+      # Get results count for this search
+      results_count = Article.search_by_title_and_content(search_term).count
+      
+      # Process search analytics
+      process_search_analytics(search_term, user_id, ip_address, results_count)
+      processed += 1
+    end
+    
+    processed
+  end
+  
+  # Save search analytics to database
   def process_search_analytics(search_term, user_identifier, ip_address, results_count)
     # Wrap in a transaction for atomicity
     ActiveRecord::Base.transaction do
@@ -280,12 +235,7 @@ class ArticlesController < ApplicationController
       # Save the record
       if search_query.save
         # Delete similar searches to keep analytics clean
-        SearchQuery.where(user_identifier: user_identifier)
-                 .where("term LIKE ? AND term != ? AND id != ?", 
-                       "#{search_term.first(search_term.length/2)}%", 
-                       search_term, 
-                       search_query.id)
-                 .destroy_all
+        search_query.delete_similar_searches
       end
     end
   end
@@ -293,26 +243,17 @@ class ArticlesController < ApplicationController
   # Track article appearances in search results
   def track_article_appearances(articles, user_identifier)
     articles.each do |article|
-      if article.respond_to?(:increment_appearances_count)
-        article.increment_appearances_count(user_identifier)
-      end
+      article.increment_appearances_count(user_identifier)
     end
   end
   
   # Prepare analytics data for search response
   def prepare_analytics_data(is_final, query)
+    user_id = ensure_user_identifier
     {
-      top_searches: begin
-                      SearchQuery.top_search_terms_for_user(ensure_user_identifier)
-                    rescue
-                      []
-                    end,
-      trending_searches: begin
-                           SearchQuery.top_searches.limit(5)
-                         rescue
-                           []
-                         end,
-      user_identifier: ensure_user_identifier,
+      top_searches: SearchQuery.top_search_terms_for_user(user_id) || [],
+      trending_searches: SearchQuery.top_searches.limit(5) || [],
+      user_identifier: user_id,
       ip_address: request.remote_ip,
       is_final_search: is_final,
       search_saved: is_final && !query.blank?
@@ -341,6 +282,25 @@ class ArticlesController < ApplicationController
     end
   end
   
+  # Handle generic error
+  def handle_generic_error(error, message)
+    Rails.logger.error("#{message}: #{error.message}")
+    Rails.logger.error(error.backtrace.join("\n"))
+    
+    respond_to do |format|
+      format.html { 
+        flash[:error] = "#{message}. Please try again later."
+        render :index 
+      }
+      format.json { 
+        render json: { 
+          error: message,
+          status: 500
+        }, status: :internal_server_error 
+      }
+    end
+  end
+  
   # Load analytics from cache
   def load_analytics_from_cache(cached_data)
     @top_searches = cached_data[:top_searches]
@@ -364,149 +324,88 @@ class ArticlesController < ApplicationController
                                   .where(search_queries: { user_identifier: user_id }).count
   end
   
-  # Apply different scope to analytics based on params
-  def apply_analytics_scope(params, user_id)
-    @is_user_specific = true
-    
-    # Global data
-    if params[:global] == 'true'
-      @top_searches = SearchQuery.order(search_count: :desc).limit(10)
-      @top_articles = Article.top_appearing(10)
-      @total_unique_searches = SearchQuery.count('DISTINCT term')
-      @total_articles_found = Article.joins(:article_views).distinct.count
-      @total_appearances = ArticleView.count
-      @is_user_specific = false
-      
-    # Specific user data  
-    elsif params[:user_id].present? && params[:user_id] != user_id
-      specified_user_id = params[:user_id]
-      @top_searches = SearchQuery.top_searches_for_user(specified_user_id, 10)
-      @top_articles = Article.top_appearing_for_user(specified_user_id, 10)
-      @total_unique_searches = SearchQuery.where(user_identifier: specified_user_id).count
-      @total_articles_found = ArticleView.joins(:search_query)
-                                       .where(search_queries: { user_identifier: specified_user_id })
-                                       .select("DISTINCT article_id").count
-      @total_appearances = ArticleView.joins(:search_query)
-                                    .where(search_queries: { user_identifier: specified_user_id }).count
-                                    
-    # IP-specific data
-    elsif params[:ip].present?
-      @top_searches = SearchQuery.top_searches_from_ip(params[:ip], 10)
-    end
-  end
-  
-  # Format analytics response for JSON
+  # Format analytics response
   def format_analytics_response(user_id)
     {
       user_identifier: user_id,
-      ip_address: request.remote_ip,
-      is_user_specific: @is_user_specific,
-      top_searches: @top_searches.map { |sq| format_search_query_response(sq) },
+      top_searches: @top_searches.map { |sq| format_search_query(sq) },
       top_articles: @top_articles.map { |a| format_article(a, user_id) },
       stats: {
-        total_unique_searches: @total_unique_searches,
-        total_articles_found: @total_articles_found,
-        total_appearances: @total_appearances
+        total_unique_searches: @total_unique_searches || 0,
+        total_articles_found: @total_articles_found || 0,
+        total_appearances: @total_appearances || 0
       }
     }
   end
   
-  # Format search query for response
-  def format_search_query_response(sq)
-    if sq.is_a?(String)
-      { term: sq, count: 1, results: 0, last_searched: Time.current }
-    else
-      { 
-        term: sq.term, 
-        count: sq.search_count,
-        results: sq.results_count,
-        last_searched: sq.last_searched_at,
-        user_identifier: sq.user_identifier,
-        ip_address: sq.ip_address
-      }
-    end
-  end
-  
-  # Format search query object
+  # Format search query for API response
   def format_search_query(sq)
     { 
-      term: sq.term, 
-      count: sq.search_count,
-      results: sq.results_count,
-      last_searched: sq.last_searched_at
+      id: sq.id,
+      term: sq.term,
+      search_count: sq.search_count,
+      results_count: sq.results_count,
+      last_searched_at: sq.last_searched_at
     }
   end
   
-  # Format article for response
+  # Format article for API response
   def format_article(article, user_id)
     { 
       id: article.id,
-      title: article.title, 
+      title: article.title,
+      author: article.author,
       category: article.category,
       appearances: article.appearance_count_for_user(user_id)
     }
   end
   
-  # Helper method to fetch cached analytics data
+  # Fetch analytics from cache
   def fetch_cached_analytics(user_id)
     begin
-      cached_data = REDIS_POOL.with do |redis|
-        redis.get("analytics:#{user_id}")
-      end
-      
-      return nil unless cached_data
-      
-      # Parse the JSON data
-      JSON.parse(cached_data, symbolize_names: true)
+      key = "user_analytics:#{user_id}"
+      cached = REDIS_POOL.with { |redis| redis.get(key) }
+      cached ? JSON.parse(cached, symbolize_names: true) : nil
     rescue => e
       Rails.logger.error("Error fetching cached analytics: #{e.message}")
       nil
     end
   end
   
-  # Helper method to cache analytics data
-  def cache_analytics_data(user_id, data)
+  # Cache analytics data
+  def cache_analytics_data(user_id)
     begin
-      # Cache data for 5 minutes
-      REDIS_POOL.with do |redis|
-        redis.setex("analytics:#{user_id}", 300, data.to_json)
-      end
+      key = "user_analytics:#{user_id}"
+      data = {
+        top_searches: @top_searches,
+        top_articles: @top_articles,
+        total_unique_searches: @total_unique_searches,
+        total_articles_found: @total_articles_found,
+        total_appearances: @total_appearances
+      }
+      REDIS_POOL.with { |redis| redis.set(key, data.to_json, ex: 5.minutes.to_i) }
     rescue => e
-      Rails.logger.error("Error caching analytics data: #{e.message}")
+      Rails.logger.error("Error caching analytics: #{e.message}")
     end
   end
   
-  # Ensure user has a persistent identifier
+  # Ensure a user identifier is available
   def ensure_user_identifier
     begin
-      # Try to get from cookies first (most persistent)
-      # Then from session, and finally generate a new one if needed
-      user_id = cookies.permanent[:user_identifier]
+      # Get user identifier from cookie or session
+      user_id = cookies[:user_identifier] || session[:user_identifier]
       
+      # Generate a new one if none exists
       if user_id.blank?
-        # If cookie is empty, try session
-        user_id = session[:user_identifier]
-        
-        if user_id.blank?
-          # If both are empty, generate a new identifier
-          user_id = SecureRandom.uuid
-        end
-        
-        # Always ensure both storage mechanisms have the identifier
+        user_id = SecureRandom.uuid
         cookies.permanent[:user_identifier] = user_id
+        session[:user_identifier] = user_id
       end
       
-      # Also set in session for this request
-      session[:user_identifier] = user_id
-      
-      # Return the user identifier
       user_id
     rescue => e
-      # Log the error but don't crash the app
-      Rails.logger.error("Error in ensure_user_identifier: #{e.message}")
-      
-      # Generate a temporary ID for this request only
-      SecureRandom.uuid
+      Rails.logger.error("Error ensuring user identifier: #{e.message}")
+      "anonymous-#{SecureRandom.hex(8)}" # Fallback anonymous ID
     end
   end
 end 

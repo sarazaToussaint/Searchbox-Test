@@ -8,18 +8,18 @@ Rails.application.routes.draw do
   # Articles routes
   resources :articles, only: [:index] do
     collection do
-      get 'search'         # Search articles
-      get 'analytics'      # Get analytics data
-      post 'set_user_identifier'   # Set user identifier
+      # Core functionality
+      get 'search'                  # Search articles
+      get 'analytics'               # Get analytics data
+      post 'set_user_identifier'    # Set user identifier
       post 'process_pending_searches'  # Process searches stored during offline
       
-      # Additional analytics endpoints
-      get 'my_searches'    # Current user's searches
-      get 'ip_searches'    # Searches from current IP
-      get 'my_top_articles'  # Current user's top articles
+      # Analytics endpoints
+      get 'my_searches'             # Current user's searches
+      get 'my_top_articles'         # Current user's top articles
       
-      # Debug endpoint
-      get 'debug_info'     # Debug information for troubleshooting
+      # Debug endpoint (remove in production if not needed)
+      get 'debug_info'              # Debug information for troubleshooting
     end
   end
 end

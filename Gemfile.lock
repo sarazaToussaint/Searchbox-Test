@@ -238,7 +238,7 @@ DEPENDENCIES
   bootsnap
   connection_pool
   debug
-  dotenv-rails (~> 3.1)
+  dotenv-rails
   faker (~> 3.0)
   jbuilder
   pg (>= 1.1)
@@ -246,7 +246,6 @@ DEPENDENCIES
   puma (>= 5.0)
   rails (~> 8.0.2)
   redis
-  redis-client
   tzinfo-data
   web-console
 
