@@ -1,4 +1,4 @@
-# Searchbox Application
+# Instant Searchbox Application
 
 ## Overview
 
