@@ -56,7 +56,7 @@ To set up the Searchbox application locally, follow these steps:
 
 1. **Clone the Repository**:
    ```bash
-   git clone `https://github.com/yourusername/searchbox-backend.git`
+   git clone `https://github.com/sarazaToussaint/Searchbox-Test`
    cd searchbox-backend
    ```
 
@@ -114,28 +114,28 @@ The application uses PostgreSQL and includes the following tables:
 
 The following API endpoints are available in the Searchbox application:
 
-- `GET /articles`  
+- [GET /articles]  
   Lists all articles.
 
-- `GET /articles/search?query=term`  
+- [GET /articles/search?query=term]  
   Searches articles by title or content.
 
-- `GET /articles/analytics`  
+- [GET /articles/analytics]  
   Retrieves analytics data for articles.
 
-- `POST /articles/set_user_identifier`  
+- [POST /articles/set_user_identifier]  
   Sets the user identifier for tracking searches.
 
-- `POST /articles/process_pending_searches`  
+- [POST /articles/process_pending_searches]  
   Processes searches that were stored during offline periods.
 
-- `GET /articles/my_searches`  
+- [GET /articles/my_searches]  
   Retrieves the current user's search history.
 
-- `GET /articles/my_top_articles`  
+- [GET /articles/my_top_articles]  
   Retrieves the current user's top articles based on search activity.
 
-- `GET /articles/debug_info`  
+- [GET /articles/debug_info]  
   Provides debug information for troubleshooting (remove in production if not needed).
 
 ## Search Implementation Details
