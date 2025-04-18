@@ -4,8 +4,7 @@ set -o errexit
 bundle install
 
 # Run database setup
-bundle exec rails db:migrate
-bundle exec rails db:seed
+bundle exec rails db:prepare
 
 # Precompile assets
 bundle exec rails assets:precompile
