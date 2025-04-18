@@ -24,8 +24,8 @@ production:
   encoding: unicode
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   url: <%= ENV['DATABASE_URL'] %>
-  database: <%= ENV['POSTGRES_DB'] || 'searchbox_db' %>
-  username: <%= ENV['POSTGRES_USER'] || 'searchbox_user' %>
+  database: <%= ENV['POSTGRES_DB'] %>
+  username: <%= ENV['POSTGRES_USER'] %>
   password: <%= ENV['POSTGRES_PASSWORD'] %>
-  host: <%= ENV['POSTGRES_HOST'] || 'localhost' %>
-  port: <%= ENV['POSTGRES_PORT'] || 5432 %>
+  host: <%= ENV['POSTGRES_HOST'] %>
+  port: <%= ENV['POSTGRES_PORT'] %>
