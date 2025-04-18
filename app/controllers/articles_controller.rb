@@ -211,7 +211,7 @@ class ArticlesController < ApplicationController
     begin
       result = {
         environment: Rails.env,
-        database_config: ActiveRecord::Base.connection.pool.spec.config.except(:password),
+        database_config: ActiveRecord::Base.connection_db_config.configuration_hash.except(:password),
         database_tables: ActiveRecord::Base.connection.tables,
         article_count: Article.count,
         search_query_count: SearchQuery.count,
