@@ -2,12 +2,34 @@ class ArticlesController < ApplicationController
   # GET /articles
   # GET /articles.json
   def index
-    @articles = Article.all
-    ensure_user_identifier
-    
-    respond_to do |format|
-      format.html
-      format.json { render json: @articles }
+    begin
+      @articles = Article.all
+      ensure_user_identifier
+      
+      respond_to do |format|
+        format.html
+        format.json { render json: @articles }
+      end
+    rescue => e
+      # Log the error
+      Rails.logger.error("Error in articles#index: #{e.message}")
+      Rails.logger.error(e.backtrace.join("\n"))
+      
+      # Return a friendly error response
+      respond_to do |format|
+        format.html { 
+          @articles = []
+          flash[:error] = "An error occurred while loading articles. Please try again later."
+          render :index
+        }
+        format.json { 
+          render json: { 
+            error: "An error occurred while loading articles",
+            status: 500,
+            message: "Please try the debug_info endpoint for more details"
+          }, status: :internal_server_error 
+        }
+      end
     end
   end
   
@@ -181,6 +203,58 @@ class ArticlesController < ApplicationController
       respond_to do |format|
         format.json { render json: { success: false, error: "Invalid pending searches data" }, status: :bad_request }
       end
+    end
+  end
+  
+  # Add the debug endpoint right after the index action
+  def debug_info
+    begin
+      result = {
+        environment: Rails.env,
+        database_config: ActiveRecord::Base.connection.pool.spec.config.except(:password),
+        database_tables: ActiveRecord::Base.connection.tables,
+        article_count: Article.count,
+        search_query_count: SearchQuery.count,
+        article_view_count: ArticleView.count,
+        rails_version: Rails.version,
+        ruby_version: RUBY_VERSION,
+        cookie_consent: cookies[:user_identifier].present?,
+        session_active: session[:user_identifier].present?,
+        ip_address: request.remote_ip
+      }
+      
+      # Try to get articles
+      begin
+        articles = Article.limit(2).to_a
+        result[:sample_article] = articles.first.attributes if articles.any?
+      rescue => e
+        result[:articles_error] = e.message
+        result[:articles_backtrace] = e.backtrace.first(5)
+      end
+      
+      # Check search queries
+      begin
+        if SearchQuery.any?
+          result[:sample_query] = SearchQuery.first.attributes
+        end
+      rescue => e
+        result[:queries_error] = e.message
+      end
+      
+      # Check Redis
+      begin
+        redis_ping = REDIS_POOL.with { |redis| redis.ping }
+        result[:redis_ping] = redis_ping
+      rescue => e
+        result[:redis_error] = e.message
+      end
+      
+      render json: result
+    rescue => e
+      render json: {
+        error: e.message,
+        backtrace: e.backtrace.first(10)
+      }
     end
   end
   
@@ -404,27 +478,35 @@ class ArticlesController < ApplicationController
   
   # Ensure user has a persistent identifier
   def ensure_user_identifier
-    # Try to get from cookies first (most persistent)
-    # Then from session, and finally generate a new one if needed
-    user_id = cookies.permanent[:user_identifier]
-    
-    if user_id.blank?
-      # If cookie is empty, try session
-      user_id = session[:user_identifier]
+    begin
+      # Try to get from cookies first (most persistent)
+      # Then from session, and finally generate a new one if needed
+      user_id = cookies.permanent[:user_identifier]
       
       if user_id.blank?
-        # If both are empty, generate a new identifier
-        user_id = SecureRandom.uuid
+        # If cookie is empty, try session
+        user_id = session[:user_identifier]
+        
+        if user_id.blank?
+          # If both are empty, generate a new identifier
+          user_id = SecureRandom.uuid
+        end
+        
+        # Always ensure both storage mechanisms have the identifier
+        cookies.permanent[:user_identifier] = user_id
       end
       
-      # Always ensure both storage mechanisms have the identifier
-      cookies.permanent[:user_identifier] = user_id
+      # Also set in session for this request
+      session[:user_identifier] = user_id
+      
+      # Return the user identifier
+      user_id
+    rescue => e
+      # Log the error but don't crash the app
+      Rails.logger.error("Error in ensure_user_identifier: #{e.message}")
+      
+      # Generate a temporary ID for this request only
+      SecureRandom.uuid
     end
-    
-    # Also set in session for this request
-    session[:user_identifier] = user_id
-    
-    # Return the user identifier
-    user_id
   end
 end 

@@ -17,6 +17,9 @@ Rails.application.routes.draw do
       get 'my_searches'    # Current user's searches
       get 'ip_searches'    # Searches from current IP
       get 'my_top_articles'  # Current user's top articles
+      
+      # Debug endpoint
+      get 'debug_info'     # Debug information for troubleshooting
     end
   end
 end

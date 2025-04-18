@@ -7,7 +7,22 @@ class Article < ApplicationRecord
   
   # Search articles by title and content
   def self.search_by_title_and_content(query)
-    where("title LIKE ? OR content LIKE ?", "%#{query}%", "%#{query}%")
+    # Clean the query to prevent SQL injection
+    sanitized_query = query.to_s.strip
+    
+    # Return all records if query is blank
+    return all if sanitized_query.blank?
+    
+    # Use different syntax depending on database adapter
+    if connection.adapter_name.downcase.include?('postgresql')
+      where("title ILIKE ? OR content ILIKE ?", "%#{sanitized_query}%", "%#{sanitized_query}%")
+    else
+      where("title LIKE ? OR content LIKE ?", "%#{sanitized_query}%", "%#{sanitized_query}%")
+    end
+  rescue => e
+    Rails.logger.error("Error in search_by_title_and_content: #{e.message}")
+    # Return an empty scope if there's an error
+    where(id: nil)
   end
   
   # Get top appearing articles in search results (global)
