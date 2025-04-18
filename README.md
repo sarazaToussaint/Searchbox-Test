@@ -4,50 +4,42 @@
 
 The Searchbox application is a real-time search engine designed to track user searches and display analytics. It is built using Ruby on Rails and utilizes PostgreSQL as the database backend. The application is engineered for scalability, capable of handling thousands of requests per hour while ensuring a clean and efficient user experience.
 
-## Table of Contents
-
-- [Project Structure](#project-structure)
-- [Functionality](#functionality)
-- [Setup Instructions](#setup-instructions)
-- [Database Schema](#database-schema)
-- [Testing](#testing)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Project Structure
 
 The project is organized into several key directories and files:
 
 Searchbox-backend/
-├── app/                         # Contains the main application code
-│   ├── controllers/             # Handles incoming requests and responses
-│   │   └── articles_controller.rb    # Manages article-related actions
-│   ├── models/                  # Contains the application's data models
-│   │   ├── article.rb               # Defines the Article model
-│   │   ├── article_view.rb         # Defines the ArticleView model
-│   │   └── search_query.rb         # Defines the SearchQuery model
-│   ├── views/                   # Contains view templates for rendering HTML
+├── app/               
+│   ├── controllers/        
+│   │   └── articles_controller.rb 
+│   ├── models/            
+│   │   ├── article.rb        
+│   │   ├── article_view.rb    
+│   │   └── search_query.rb   
+│   ├── views/                
 │   │   └── articles/
-│   │       └── index.html.erb      # Search interface and results display
+│   │       └── index.html.erb   
 │   └── ...
-├── config/                      # Configuration files for the application
-│   ├── database.yml                 # Database configuration settings
-│   ├── routes.rb                   # Defines application routes
+├── config/                 
+│   ├── database.yml           
+│   ├── routes.rb          
 │   └── ...
-├── db/                          # Database-related files
-│   ├── migrate/                   # Database migration files
-│   ├── seeds.rb                   # Seed data for populating the database
-│   └── schema.rb                  # Current database schema
-├── Gemfile                      # Ruby gems required for the application
-├── .env                         # Environment variables for configuration
-└── README.md                    # Project documentation
+├── db/                       
+│   ├── migrate/                 
+│   ├── seeds.rb                
+│   └── schema.rb               
+├── Gemfile                     
+├── .env                         
+└── README.md                    
 
 
 ## Technologies Used
 
+- Ruby 3
 - Ruby on Rails 7.1
 - VanillaJS (no JavaScript frameworks)
-- PostgreSQL (development)
+- PostgreSQL 
 - HTML5 & CSS3
 
 ## Getting Started
@@ -64,7 +56,7 @@ To set up the Searchbox application locally, follow these steps:
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/yourusername/searchbox-backend.git
+   git clone `https://github.com/yourusername/searchbox-backend.git`
    cd searchbox-backend
    ```
 
@@ -183,7 +175,7 @@ bundle exec rspec
 
 ## Live Link 
 
-`https://searchbox-test.onrender.com/`
+[https://searchbox-test.onrender.com/]
 
 ## Contributing
 
