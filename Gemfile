@@ -3,8 +3,7 @@ source "https://rubygems.org"
 # Core Rails gems
 gem "rails", "~> 8.0.2"
 gem "propshaft" # Asset pipeline
-gem "sqlite3", ">= 2.1" # Database for development and test
-gem "pg", ">= 1.1", group: :production # PostgreSQL for production
+gem "pg", ">= 1.1" # PostgreSQL for all environments
 gem "puma", ">= 5.0" # Web server
 gem "jbuilder" # JSON API support
 

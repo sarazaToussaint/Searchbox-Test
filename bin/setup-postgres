@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# Set up PostgreSQL databases for local development
+echo "Setting up PostgreSQL databases for Searchbox..."
+
+# Create the development and test databases
+echo "Creating databases..."
+createdb searchbox_development || echo "Development database already exists (or error creating)"
+createdb searchbox_test || echo "Test database already exists (or error creating)"
+
+# Run migrations
+echo "Running migrations..."
+bundle exec rails db:migrate
+
+# Check if we need to seed the database
+if [ "$1" == "--seed" ]; then
+  echo "Seeding database..."
+  bundle exec rails db:seed
+fi
+
+echo "Setup complete!"
+echo "You can now run the Rails server with: bundle exec rails server" 
