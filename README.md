@@ -1,20 +1,53 @@
-# Instant Article Search Application
+# Searchbox Application
 
-This is a fast and responsive article search application built with Ruby on Rails and VanillaJS. It demonstrates how to create a modern search interface without using a JavaScript framework.
+## Overview
 
-## Features
+The Searchbox application is a real-time search engine designed to track user searches and display analytics. It is built using Ruby on Rails and utilizes PostgreSQL as the database backend. The application is engineered for scalability, capable of handling thousands of requests per hour while ensuring a clean and efficient user experience.
 
-- Instant search as you type
-- 100 sample articles with categories and authors
-- Search by title or content
-- Responsive design
-- RESTful API endpoints
+## Table of Contents
+
+- [Project Structure](#project-structure)
+- [Functionality](#functionality)
+- [Setup Instructions](#setup-instructions)
+- [Database Schema](#database-schema)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Project Structure
+
+The project is organized into several key directories and files:
+
+Searchbox-backend/
+├── app/                         # Contains the main application code
+│   ├── controllers/             # Handles incoming requests and responses
+│   │   └── articles_controller.rb    # Manages article-related actions
+│   ├── models/                  # Contains the application's data models
+│   │   ├── article.rb               # Defines the Article model
+│   │   ├── article_view.rb         # Defines the ArticleView model
+│   │   └── search_query.rb         # Defines the SearchQuery model
+│   ├── views/                   # Contains view templates for rendering HTML
+│   │   └── articles/
+│   │       └── index.html.erb      # Search interface and results display
+│   └── ...
+├── config/                      # Configuration files for the application
+│   ├── database.yml                 # Database configuration settings
+│   ├── routes.rb                   # Defines application routes
+│   └── ...
+├── db/                          # Database-related files
+│   ├── migrate/                   # Database migration files
+│   ├── seeds.rb                   # Seed data for populating the database
+│   └── schema.rb                  # Current database schema
+├── Gemfile                      # Ruby gems required for the application
+├── .env                         # Environment variables for configuration
+└── README.md                    # Project documentation
+
 
 ## Technologies Used
 
 - Ruby on Rails 7.1
 - VanillaJS (no JavaScript frameworks)
-- SQLite (development)
+- PostgreSQL (development)
 - HTML5 & CSS3
 
 ## Getting Started
@@ -23,37 +56,95 @@ This is a fast and responsive article search application built with Ruby on Rail
 
 - Ruby 3.0.0 or higher
 - Rails 7.1 or higher
-- SQLite3
+- PostgreSQL 14 or Higher
 
-### Installation
+## Setup Instructions
 
-1. Clone the repository
-   ```
-   git clone <repository-url>
-   cd Searchbox-backend
+To set up the Searchbox application locally, follow these steps:
+
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/yourusername/searchbox-backend.git
+   cd searchbox-backend
    ```
 
-2. Install dependencies
-   ```
+2. **Install Dependencies**:
+   Ensure you have Ruby and Bundler installed, then run:
+   ```bash
    bundle install
    ```
 
-3. Set up the database
-   ```
-   rails db:create db:migrate db:seed
+3. **Set Up Environment Variables**:
+   Create a `.env` file in the root directory and add the following variables:
+   ```plaintext
+   POSTGRES_USER=postgres
+   POSTGRES_PASSWORD=password
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
    ```
 
-4. Start the server
-   ```
-   rails server
+4. **Create the Database**:
+   Run the following command to create the database:
+   ```bash
+   bundle exec rails db:create
    ```
 
-5. Visit http://localhost:3000 in your browser
+5. **Run Migrations**:
+   Apply the database migrations to set up the schema:
+   ```bash
+   bundle exec rails db:migrate
+   ```
+
+6. **Seed the Database**:
+   Populate the database with sample data:
+   ```bash
+   bundle exec rails db:seed
+   ```
+
+7. **Start the Rails Server**:
+   Launch the application:
+   ```bash
+   bundle exec rails server
+   ```
+
+8. **Access the Application**:
+   Open your web browser and navigate to `http://localhost:3000` to view the application.
+
+## Database Schema
+
+The application uses PostgreSQL and includes the following tables:
+
+- **articles**: Stores article data, including title, content, author, and category.
+- **search_queries**: Records user search terms, along with user tracking information and search counts.
+- **article_views**: Tracks the relationship between articles and search queries, including view counts.
 
 ## API Endpoints
 
-- `GET /articles` - List all articles
-- `GET /articles/search?query=term` - Search articles by title or content
+The following API endpoints are available in the Searchbox application:
+
+- `GET /articles`  
+  Lists all articles.
+
+- `GET /articles/search?query=term`  
+  Searches articles by title or content.
+
+- `GET /articles/analytics`  
+  Retrieves analytics data for articles.
+
+- `POST /articles/set_user_identifier`  
+  Sets the user identifier for tracking searches.
+
+- `POST /articles/process_pending_searches`  
+  Processes searches that were stored during offline periods.
+
+- `GET /articles/my_searches`  
+  Retrieves the current user's search history.
+
+- `GET /articles/my_top_articles`  
+  Retrieves the current user's top articles based on search activity.
+
+- `GET /articles/debug_info`  
+  Provides debug information for troubleshooting (remove in production if not needed).
 
 ## Search Implementation Details
 
@@ -66,6 +157,41 @@ The application implements client-side instant search with the following feature
 
 The search is performed against the title and content fields in the database, with case-insensitive matching.
 
-## License
+## Functionality
 
-This project is licensed under the MIT License.
+The Searchbox application provides the following key functionalities:
+
+1. **Real-Time Search**: Users can input search queries, and results are displayed dynamically as they type.
+2. **Search Analytics**: The application tracks user searches, storing analytics data such as search terms, user identifiers, and IP addresses.
+3. **Unique Search Tracking**: The application ensures that only unique searches are recorded per user and IP address, preventing clutter in the analytics database.
+4. **Categorized Content**: Includes 30+ sample articles with categories and author metadata.
+5. **User-Specific Analytics**: Users can view their search history and analytics data, providing insights into their search behavior.
+6. **Error Handling**: The application includes robust error handling to manage exceptions and provide user-friendly error messages.
+
+### Key Components
+
+- **Controllers**: Handle incoming requests and manage the flow of data between models and views.
+- **Models**: Define the application's data structure and business logic, including methods for searching and tracking analytics.
+- **Views**: Render the user interface, displaying search results and analytics data.
+
+## Testing
+
+The application uses RSpec for testing. To run the test suite, execute:
+```bash
+bundle exec rspec
+```
+
+## Live Link 
+
+`https://searchbox-test.onrender.com/`
+
+## Contributing
+
+Contributions are welcome! Please follow these steps to contribute:
+
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them.
+4. Push your branch to your forked repository.
+5. Create a pull request.
+
