@@ -20,22 +20,14 @@ test:
   <<: *default
   database: storage/test.sqlite3
 
-
-# Production configuration optimized for Render and other cloud platforms
+# Production configuration optimized for Render PostgreSQL
 production:
-  primary:
-    <<: *default
-    database: <%= ENV.fetch('DATABASE_URL', 'storage/production.sqlite3').include?('postgres') ? ENV.fetch('DATABASE_URL') : 'storage/production.sqlite3' %>
-    adapter: <%= ENV.fetch('DATABASE_URL', '').include?('postgres') ? 'postgresql' : 'sqlite3' %>
-  cache:
-    <<: *default
-    database: storage/production_cache.sqlite3
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *default
-    database: storage/production_queue.sqlite3
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *default
-    database: storage/production_cable.sqlite3
-    migrations_paths: db/cable_migrate
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  url: <%= ENV['DATABASE_URL'] %>
+  database: <%= ENV['POSTGRES_DB'] || 'searchbox_db' %>
+  username: <%= ENV['POSTGRES_USER'] || 'searchbox_user' %>
+  password: <%= ENV['POSTGRES_PASSWORD'] %>
+  host: <%= ENV['POSTGRES_HOST'] || 'localhost' %>
+  port: <%= ENV['POSTGRES_PORT'] || 5432 %>

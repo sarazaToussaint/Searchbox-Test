@@ -1,47 +1,34 @@
 namespace :render do
-  desc "Tasks for Render deployment"
-  
-  task :setup_db => :environment do
-    # Only run in production environment
-    if Rails.env.production?
-      begin
-        # Check if this is a PostgreSQL connection
-        if ActiveRecord::Base.connection.adapter_name.downcase.include?('postgresql')
-          puts "Setting up PostgreSQL database for Render deployment..."
-          
-          # Make sure we have all the latest migrations
-          Rake::Task["db:migrate"].invoke
-          
-          # Check if the database needs to be seeded
-          if Article.count == 0
-            puts "Database is empty, seeding with initial data..."
-            Rake::Task["db:seed"].invoke
-            puts "Seeded database with #{Article.count} articles"
-          else
-            puts "Database already contains #{Article.count} articles, skipping seed."
-          end
-        else
-          puts "Not using PostgreSQL, running standard setup..."
-          Rake::Task["db:migrate"].invoke
-          
-          if Article.count == 0
-            puts "Database is empty, seeding with initial data..."
-            Rake::Task["db:seed"].invoke
-            puts "Seeded database with #{Article.count} articles"
-          else
-            puts "Database already contains #{Article.count} articles, skipping seed."
-          end
-        end
-        
-        puts "Database setup completed successfully."
-      rescue => e
-        puts "Error during database setup: #{e.message}"
-        puts e.backtrace
-        raise e
-      end
-    else
-      puts "This task is intended for production environment only."
-      puts "For development, use db:setup or db:seed directly."
+  desc "Setup database for Render deployment"
+  task setup_db: :environment do
+    # Only run if the database exists
+    if ActiveRecord::Base.connection.table_exists?(:schema_migrations)
+      puts "Database already exists and has schema_migrations table. Skipping setup."
+      next
     end
+    
+    # Create the PostgreSQL database
+    puts "Setting up database for Render deployment"
+    
+    # Load schema if migrations are available
+    if File.exist?(Rails.root.join("db/schema.rb"))
+      puts "Loading schema from schema.rb"
+      Rake::Task["db:schema:load"].invoke
+    else
+      puts "Running migrations"
+      Rake::Task["db:migrate"].invoke
+    end
+    
+    # Seed the database if seeds are available
+    if File.exist?(Rails.root.join("db/seeds.rb"))
+      puts "Seeding database"
+      Rake::Task["db:seed"].invoke
+    end
+    
+    puts "Database setup complete"
+  rescue => e
+    puts "Error setting up database: #{e.message}"
+    puts e.backtrace
+    raise
   end
 end 
