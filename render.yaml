@@ -1,29 +1,31 @@
+databases:
+  - name: searchbox-instance
+    databaseName: searchbox_db
+    user: searchbox_user
+    plan: free 
+
 services:
   - type: web
     name: searchbox-backend
-    env: ruby
-    buildCommand: bundle install && bundle exec rails assets:precompile && bundle exec rails db:migrate && bundle exec rails render:setup_db
-    startCommand: bundle exec rails server -b 0.0.0.0
+    runtime: ruby
+    plan: free 
+    buildCommand: "./bin/render-build.sh"
+    startCommand: "bundle exec rails server" 
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: searchbox-instance
           property: connectionString
       - key: RAILS_MASTER_KEY
-        sync: false
+        sync:false:- key: WEB_CONCURRENCY
       - key: RAILS_ENV
         value: production
       - key: RAILS_LOG_TO_STDOUT
-        value: true
+        value: 2
 
-databases:
-  - name: searchbox-instance
-    databaseName: searchbox_db
-    user: searchbox_user
-
-  - type: redis
-    name: searchbox-redis
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: everywhere
-    plan: free 
+  # - type: redis
+  #   name: searchbox-redis
+  #   ipAllowList:
+  #     - source: 0.0.0.0/0
+  #       description: everywhere
+    
