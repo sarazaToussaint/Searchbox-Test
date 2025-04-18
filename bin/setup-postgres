@@ -3,10 +3,21 @@
 # Set up PostgreSQL databases for local development
 echo "Setting up PostgreSQL databases for Searchbox..."
 
+# Load environment variables from .env file if it exists
+if [ -f .env ]; then
+  echo "Loading environment variables from .env file..."
+  export $(grep -v '^#' .env | xargs)
+  echo "Using PostgreSQL user: $POSTGRES_USER"
+  echo "Using PostgreSQL host: $POSTGRES_HOST"
+fi
+
+# Set PGPASSWORD environment variable for createdb commands
+export PGPASSWORD=$POSTGRES_PASSWORD
+
 # Create the development and test databases
 echo "Creating databases..."
-createdb searchbox_development || echo "Development database already exists (or error creating)"
-createdb searchbox_test || echo "Test database already exists (or error creating)"
+createdb -U $POSTGRES_USER -h $POSTGRES_HOST searchbox_development || echo "Development database already exists (or error creating)"
+createdb -U $POSTGRES_USER -h $POSTGRES_HOST searchbox_test || echo "Test database already exists (or error creating)"
 
 # Run migrations
 echo "Running migrations..."
@@ -17,6 +28,9 @@ if [ "$1" == "--seed" ]; then
   echo "Seeding database..."
   bundle exec rails db:seed
 fi
+
+# Unset PGPASSWORD for security
+unset PGPASSWORD
 
 echo "Setup complete!"
 echo "You can now run the Rails server with: bundle exec rails server" 
