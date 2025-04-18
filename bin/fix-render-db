@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+# Script to fix database issues on Render
+echo "Starting database repair process..."
+
+# Enable verbose output for debugging
+set -x
+
+# Force load schema and reset
+DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bundle exec rails db:schema:load
+
+# Run migrations 
+bundle exec rails db:migrate
+
+# Seed the database
+bundle exec rails db:seed
+
+# Check database state
+echo "Current database state:"
+bundle exec rails runner "puts \"Tables: #{ActiveRecord::Base.connection.tables.join(', ')}\""
+bundle exec rails runner "puts \"Articles: #{Article.count}\nSearch Queries: #{SearchQuery.count}\nArticle Views: #{ArticleView.count}\""
+
+echo "Database repair process completed." 

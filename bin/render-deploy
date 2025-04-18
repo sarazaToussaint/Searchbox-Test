@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+# Script for deploying to Render and ensuring database setup
+
+echo "Starting Render deployment process..."
+
+# Setup database - this will only run if DATABASE_URL is set
+if [ -n "$DATABASE_URL" ]; then
+  echo "Database URL detected. Setting up database..."
+  
+  # Check if any tables exist
+  if bundle exec rails runner "puts ActiveRecord::Base.connection.tables.empty?"; then
+    echo "No tables found in database. Creating schema..."
+    
+    # Reset database (drop and recreate)
+    DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bundle exec rails db:schema:load
+
+    # Run migrations to ensure latest schema
+    bundle exec rails db:migrate
+    
+    # Seed the database
+    echo "Seeding database..."
+    bundle exec rails db:seed
+    
+    echo "Database setup completed."
+  else
+    echo "Tables already exist in database. Running migrations..."
+    bundle exec rails db:migrate
+    echo "Migrations completed."
+  fi
+else
+  echo "No DATABASE_URL found. Skipping database setup."
+fi
+
+echo "Deployment complete. Starting Rails server..."
+bundle exec rails server -b 0.0.0.0 -p $PORT 
