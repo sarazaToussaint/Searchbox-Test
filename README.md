@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Searchbox application is a real-time search engine designed to track user searches and display analytics. It is built using Ruby on Rails and utilizes PostgreSQL as the database backend. The application is engineered for scalability, capable of handling thousands of requests per hour while ensuring a clean and efficient user experience.
+The Instant Searchbox application is a real-time search engine designed to track user searches and display analytics. It is built using Ruby on Rails and utilizes PostgreSQL as the database backend. The application is engineered for scalability, capable of handling thousands of requests per hour while ensuring a clean and efficient user experience.
 
 
 ## Project Structure
