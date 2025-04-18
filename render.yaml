@@ -2,30 +2,23 @@ databases:
   - name: searchbox-instance
     databaseName: searchbox_db
     user: searchbox_user
-    plan: free 
+    plan: free
 
 services:
   - type: web
-    name: searchbox-backend
+    name: Searchbox-Test
     runtime: ruby
-    plan: free 
+    plan: free
     buildCommand: "./bin/render-build.sh"
-    startCommand: "bundle exec rails server" 
+    startCommand: "bundle exec rails server"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: searchbox-instance
           property: connectionString
       - key: RAILS_MASTER_KEY
-        sync:false:- key: WEB_CONCURRENCY
+        sync: false  # Only if your master key is manually managed in Render's dashboard
       - key: RAILS_ENV
         value: production
       - key: RAILS_LOG_TO_STDOUT
-        value: 2
-
-  # - type: redis
-  #   name: searchbox-redis
-  #   ipAllowList:
-  #     - source: 0.0.0.0/0
-  #       description: everywhere
-    
+        value: enabled
