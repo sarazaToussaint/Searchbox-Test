@@ -20,7 +20,7 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 
 group :development, :test do
   gem "debug", platforms: %i[ mri mswin mswin64 mingw x64_mingw ]
-  gem "faker", "~> 3.0" # For sample data generation
+  gem "faker", "~> 3.5" # For sample data generation
 end
 
 group :development do
