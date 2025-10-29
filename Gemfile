@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 # Core Rails gems
-gem "rails", "~> 8.0.2"
+gem "rails", "~> 8.1.1"
 gem "pg", ">= 1.1" # PostgreSQL database
 gem "puma", ">= 5.0" # Web server
 gem "propshaft" # Asset pipeline (lightweight replacement for Sprockets)
